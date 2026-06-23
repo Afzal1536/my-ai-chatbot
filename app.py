@@ -1,7 +1,22 @@
+import os
+import zipfile
 import gradio as gr
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from peft import PeftModel
+
+# =========================
+# UNZIP MODEL (IMPORTANT)
+# =========================
+zip_path = "ai_model.zip"
+extract_path = "ai_model"
+
+if not os.path.exists(extract_path):
+    print("Unzipping model...")
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_path)
+
+print("Model ready!")
 
 # =========================
 # BASE MODEL
@@ -15,7 +30,6 @@ bnb_config = BitsAndBytesConfig(
     bnb_4bit_quant_type="nf4"
 )
 
-print("Loading tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 print("Loading base model...")
@@ -26,10 +40,10 @@ base_model = AutoModelForCausalLM.from_pretrained(
 )
 
 # =========================
-# LOAD YOUR TRAINED MODEL
+# LOAD YOUR FINE-TUNED MODEL
 # =========================
-print("Loading fine-tuned model...")
-model = PeftModel.from_pretrained(base_model, "ai_model")
+print("Loading LoRA model...")
+model = PeftModel.from_pretrained(base_model, extract_path)
 
 # =========================
 # CHAT FUNCTION
@@ -46,20 +60,19 @@ def chat(message, history):
         )
 
     response = tokenizer.decode(output[0], skip_special_tokens=True)
-
     return response
 
 # =========================
-# GRADIO UI (CHATGPT STYLE)
+# GRADIO UI
 # =========================
 demo = gr.ChatInterface(
     fn=chat,
-    title="My Custom AI ChatGPT",
-    description="AI trained by me using LoRA + Qwen model"
+    title="My AI ChatGPT Clone",
+    description="Custom trained AI model running online"
 )
 
 # =========================
-# RUN SERVER (IMPORTANT FOR RENDER)
+# RUN SERVER (RENDER FIX)
 # =========================
 if __name__ == "__main__":
     demo.launch(
